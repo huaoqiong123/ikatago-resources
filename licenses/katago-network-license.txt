@@ -1,0 +1,62 @@
+katagotraining.org - Neural Network License
+          });
+        }
+      });
+            Networks
+            Games
+            Contributions
+            Extra Nets
+            Archives
+            Releases
+            GitHub (KataGo)
+            GitHub (Server)
+              Log In
+              Sign Up
+katagotraining.org - Neural Network License
+License for KataGo's Neural Networks
+The following license applies to the official KataGo neural network files and checkpoints available on this site katagotraining.org, including all networks on the https://katagotraining.org/networks/ page in the "kata1" run, with a few exceptions, indicated further below. The same license also applies to the networks on the https://katagotraining.org/extra_networks/ page that are labeled as "KataGo" networks, such as the "KataGo Human SL Network", rather than being attributed to an external contributor. (For non-"KataGo" networks attributed to another contributor, see section further below).
+--------------------
+KataGo Neural Network License
+Copyright 2026 David J Wu ("lightvector").
+Permission is hereby granted, free of charge, to any person obtaining a copy of the neural net files or training weight files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+--------------------
+Exceptions
+The oldest networks imported from prior runs before distributed training began, namely the ones marked on https://katagotraining.org/networks/ as belonging to the "g170" run, are not covered by the above license but rather are under CC0 and are effectively public domain.
+The "zhizi" networks released by ZhiziGo for use in KataGo's main "kata1" training run and available on https://katagotraining.org/networks/, e.g. "kata1-zhizi-b28c512nbt-muonfd2" and "kata1-zhizi-b40c768nbt-fdx6c" and so on, are released under the following license:
+--------------------
+Copyright (c) 2026  hzyhhzy &amp; zhizigo.com
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+--------------------
+Extra Neural Networks From Other Contributors
+As mentioned above, the networks at the https://katagotraining.org/extra_networks/ page labeled as "KataGo" networks are covered by the "KataGo Neural Network License", but the ones on that page from various named external contributors and not labeled as "KataGo" networks might not be so covered. All such externally-contributed networks were released to me with the expectation that they would be offered for free on this website for the public to download and use freely, but explicit terms (e.g. commercial use, further finetuning and modification, etc.) were not necessarily communicated.
+          Katago engine  by lightvector
+          (engine license).
+          Katago server  by lightvector and tychota
+          (server code license).
+          Privacy and data use policy.
+          Neural Net License.
+          Additional thanks to Jane Street for supporting KataGo's earlier runs, and to GoGoD and Go4Go for pro games for improving training.

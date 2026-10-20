@@ -26,7 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/huaoqiong123/ikatago-resources/main
 | `--dry-run` | `DRY_RUN=1` | 只检测并打印计划，不下载、不写文件 |
 | `--network b18\|b28` | `NETWORK` | 权重，默认 b18（更快）；b28 更强但更慢、显存需求更大 |
 | `--install-dir DIR` | `INSTALL_DIR` | 默认 `~/ikatago` |
-| `--cuda 12.1\|12.8\|13.2` | `FORCE_CUDA` | 强制指定 KataGo CUDA 版本 |
+| `--cuda 12.1\|12.8\|13.2` | `FORCE_CUDA` | 强制指定 KataGo CUDA 版本（其他取值会报错） |
 | `--no-upstream-fallback` | `UPSTREAM_FALLBACK=0` | 本仓库 Release 下载失败时不回退到上游地址 |
 | `--skip-gpu-check` | `SKIP_GPU_CHECK=1` | 无 nvidia-smi 也继续 |
 | | `MANIFEST_FILE` / `MANIFEST_URL` | 使用外部 manifest 替代脚本内嵌的 manifest |
@@ -46,7 +46,7 @@ curl -fsSL https://raw.githubusercontent.com/huaoqiong123/ikatago-resources/main
 
 ### CUDA / cuDNN 运行库（重要）
 
-KataGo v1.18.2 的 Linux 包是 **AppImage**，但**不包含** CUDA 运行库（实测缺 `libcublas.so.12`）。你需要自行安装与文件名一致的 CUDA Toolkit 运行库（cudart、cuBLAS）和 cuDNN，例如 `cuda12.8-cudnn9.8.0` 对应 CUDA 12.8 和 cuDNN 9.x。没有 FUSE2 时，启动脚本会自动加上 `APPIMAGE_EXTRACT_AND_RUN=1`。
+KataGo v1.18.2 的 Linux 包是 **AppImage**，但**不包含** CUDA 运行库（实测缺 `libcublas.so.12`）。你需要自行安装与文件名一致的 CUDA Toolkit 运行库（cudart、cuBLAS）和 cuDNN，例如 `cuda12.8-cudnn9.8.0` 对应 CUDA 12.8 和 cuDNN 9.x。没有 FUSE2 时，四个启动脚本（含 `start-ikatago-server.sh`）都会自动加上 `APPIMAGE_EXTRACT_AND_RUN=1`。安装结束时脚本会在 `ldconfig` 缓存里查找 `libcublas` / `libcudnn`，找不到只给出警告（通过 `LD_LIBRARY_PATH` 提供的库不会出现在缓存里，可忽略）。
 
 ## 安装后的目录结构
 
@@ -95,6 +95,6 @@ git commit -am "Update assets to $TAG" && git push
 | kata1-b28c512nbt-s13255194368-d5935380940 | 同上 | 同上 |
 | ikatago-server 5.0.1（linux） | https://github.com/kinfkong/ikatago-server/releases/tag/v5.0.1 | **上游仓库没有 LICENSE 文件**，是否允许再分发不明确 |
 
-> 关于 ikatago-server：上游没有声明许可证，二次分发的授权不明确。在得到作者 kinfkong 的许可之前，建议不要把它上传到本仓库的 Release，安装脚本会自动回退到上游下载地址。
+> 关于 ikatago-server：上游没有声明许可证，二次分发的授权不明确。在得到作者 kinfkong 的许可之前，不要把它上传到本仓库的 Release：`manifest.tsv` 中 `ikatago_server` 的 `url` 直接指向上游地址，安装脚本始终从上游下载并校验 sha256。
 
 本仓库脚本本身采用 MIT 许可证。

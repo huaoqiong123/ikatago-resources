@@ -47,6 +47,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 case "$NETWORK" in b18|b28) ;; *) die 1 "--network must be b18 or b28" ;; esac
+case "$FORCE_CUDA" in ""|12.1|12.8|13.2) ;; *) die 1 "--cuda must be one of 12.1, 12.8, 13.2" ;; esac
 
 embedded_manifest() {
 cat <<'MANIFEST'
@@ -57,7 +58,7 @@ katago_cuda12.8	katago-v1.18.2-cuda12.8-cudnn9.8.0-linux-x64.zip	https://github.
 katago_cuda13.2	katago-v1.18.2-cuda13.2-cudnn9.24.0-linux-x64.zip	https://github.com/huaoqiong123/ikatago-resources/releases/download/v1.0.0/katago-v1.18.2-cuda13.2-cudnn9.24.0-linux-x64.zip	f75ad848543014c3ff8df6e9d378efc078c07d458c5e6def06bbb5df8accb169	50896760	https://github.com/lightvector/KataGo/releases/download/v1.18.2/katago-v1.18.2-cuda13.2-cudnn9.24.0-linux-x64.zip	MIT
 network_b18	kata1-b18c384nbt-s9996604416-d4316597426.bin.gz	https://github.com/huaoqiong123/ikatago-resources/releases/download/v1.0.0/kata1-b18c384nbt-s9996604416-d4316597426.bin.gz	9d7a6afed8ff5b74894727e156f04f0cd36060a24824892008fbb6e0cba51f1d	97898094	https://media.katagotraining.org/uploaded/networks/models/kata1/kata1-b18c384nbt-s9996604416-d4316597426.bin.gz	katagotraining-network-license(MIT-style)
 network_b28	kata1-b28c512nbt-s13255194368-d5935380940.bin.gz	https://github.com/huaoqiong123/ikatago-resources/releases/download/v1.0.0/kata1-b28c512nbt-s13255194368-d5935380940.bin.gz	c5bca453d7b08ea8df6546439325d4dd681e77d975e1da3f7593d771147b73bc	271440852	https://media.katagotraining.org/uploaded/networks/models/kata1/kata1-b28c512nbt-s13255194368-d5935380940.bin.gz	katagotraining-network-license(MIT-style)
-ikatago_server	ikatago-server-5.0.1-linux.zip	https://github.com/huaoqiong123/ikatago-resources/releases/download/v1.0.0/ikatago-server-5.0.1-linux.zip	fc83d04596dad3b7c1d2a20a19a6d8c1d5bb43612a145225172d78bffbb07145	8215877	https://github.com/kinfkong/ikatago-server/releases/download/v5.0.1/ikatago-server-5.0.1-linux.zip	NO-LICENSE-FILE-upstream(redistribution-unclear)
+ikatago_server	ikatago-server-5.0.1-linux.zip	https://github.com/kinfkong/ikatago-server/releases/download/v5.0.1/ikatago-server-5.0.1-linux.zip	fc83d04596dad3b7c1d2a20a19a6d8c1d5bb43612a145225172d78bffbb07145	8215877	https://github.com/kinfkong/ikatago-server/releases/download/v5.0.1/ikatago-server-5.0.1-linux.zip	NO-LICENSE-FILE-upstream(redistribution-unclear)
 # END MANIFEST
 MANIFEST
 }
@@ -66,7 +67,7 @@ MANIFEST
 if command -v curl >/dev/null 2>&1; then DL=curl
 elif command -v wget >/dev/null 2>&1; then DL=wget
 else die 3 "需要 curl 或 wget / curl or wget is required"; fi
-for c in unzip sha256sum awk; do
+for c in unzip sha256sum awk sed sort head tr find od; do
   if ! command -v "$c" >/dev/null 2>&1; then
     if [ "$DRY_RUN" = 1 ]; then warn "missing $c"; else die 3 "缺少依赖 / missing dependency: $c (e.g. sudo apt install $c)"; fi
   fi
@@ -84,6 +85,7 @@ elif [ -n "$MANIFEST_URL" ]; then
   tmpm="$(mktemp)"; fetch "$MANIFEST_URL" "$tmpm" || die 4 "cannot download manifest $MANIFEST_URL"
   MANIFEST_DATA="$(cat "$tmpm")"; rm -f "$tmpm"
 else MANIFEST_DATA="$(embedded_manifest)"; fi
+MANIFEST_DATA="$(printf '%s\n' "$MANIFEST_DATA" | tr -d '\r')"
 
 # field: 2 filename 3 url 4 sha256 5 size 6 source_url 7 license
 mf() { printf '%s\n' "$MANIFEST_DATA" | awk -F'\t' -v id="$1" -v f="$2" '$1==id {print $f; exit}'; }
@@ -144,7 +146,8 @@ download_asset() { # id -> prints path
       tmp="$out.part"
       if fetch "$u" "$tmp" && sha_ok "$tmp" "$sha"; then mv "$tmp" "$out"; printf '%s' "$out"; return 0; fi
       warn "下载或 sha256 校验失败 / download or sha256 mismatch: $u"
-      rm -f "$tmp"; sleep $((i*3))
+      rm -f "$tmp"
+      if [ "$i" -lt "$RETRIES" ]; then sleep $((i*3)); fi
     done
   done
   die 5 "无法下载 / failed to download $f"
@@ -167,7 +170,27 @@ cp -f "$INSTALL_DIR/katago/default_gtp.cfg" "$INSTALL_DIR/configs/gtp.cfg"
 cp -f "$INSTALL_DIR/katago/analysis_example.cfg" "$INSTALL_DIR/configs/analysis.cfg"
 
 K="$INSTALL_DIR/katago/katago"; N="$INSTALL_DIR/networks/default.bin.gz"
-mkscript() { printf '#!/usr/bin/env bash\nset -euo pipefail\n%s\n' "$2" > "$INSTALL_DIR/$1"; chmod +x "$INSTALL_DIR/$1"; }
+LDCONFIG="$(command -v ldconfig 2>/dev/null || true)"
+if [ -z "$LDCONFIG" ]; then
+  for p in /sbin/ldconfig /usr/sbin/ldconfig; do
+    if [ -x "$p" ]; then LDCONFIG="$p"; break; fi
+  done
+fi
+ldcache() { if [ -n "$LDCONFIG" ]; then "$LDCONFIG" -p 2>/dev/null || true; fi; }
+
+# KataGo v1.18.x Linux 发行包为 AppImage (ELF magic + "AI\x02")；无 FUSE 时用 extract-and-run。
+IS_APPIMAGE=0; PRELUDE=""
+if [ "$(head -c 11 "$K" | tail -c 3 | od -An -c | tr -d ' ')" = 'AI002' ]; then
+  IS_APPIMAGE=1
+  log "KataGo 二进制为 AppImage / KataGo binary is an AppImage"
+  if ! { [ -e /dev/fuse ] && ldcache | grep -q 'libfuse\.so\.2'; }; then
+    warn "未检测到 FUSE2，启动脚本将设置 APPIMAGE_EXTRACT_AND_RUN=1 / no FUSE2, using APPIMAGE_EXTRACT_AND_RUN=1"
+    PRELUDE='export APPIMAGE_EXTRACT_AND_RUN=1
+'
+  fi
+fi
+
+mkscript() { printf '#!/usr/bin/env bash\nset -euo pipefail\n%s%s\n' "$PRELUDE" "$2" > "$INSTALL_DIR/$1"; chmod +x "$INSTALL_DIR/$1"; }
 mkscript start-gtp.sh "exec \"$K\" gtp -model \"$N\" -config \"$INSTALL_DIR/configs/gtp.cfg\" \"\$@\""
 mkscript start-analysis.sh "exec \"$K\" analysis -model \"$N\" -config \"$INSTALL_DIR/configs/analysis.cfg\" \"\$@\""
 mkscript start-benchmark.sh "exec \"$K\" benchmark -model \"$N\" -config \"$INSTALL_DIR/configs/gtp.cfg\" \"\$@\""
@@ -176,14 +199,13 @@ mkscript start-ikatago-server.sh "# ikatago-server 需要指向 KataGo 及其配
 if [ \$# -eq 0 ]; then echo '用法: 传入 ikatago-server 参数，例如 --platform/--token 等；可用参数如下:'; exec \"$SRV_BIN\" --help; fi
 exec \"$SRV_BIN\" \"\$@\""
 
-# KataGo v1.18.x Linux 发行包为 AppImage (ELF magic + "AI\x02")；无 FUSE 时用 extract-and-run。
-if [ "$(head -c 11 "$K" | tail -c 3 | od -An -c | tr -d ' ')" = 'AI002' ]; then
-  log "KataGo 二进制为 AppImage / KataGo binary is an AppImage"
-  if ! { [ -e /dev/fuse ] && ldconfig -p 2>/dev/null | grep -q 'libfuse\.so\.2'; }; then
-    warn "未检测到 FUSE2，启动脚本将设置 APPIMAGE_EXTRACT_AND_RUN=1 / no FUSE2, using APPIMAGE_EXTRACT_AND_RUN=1"
-    for f in start-gtp.sh start-analysis.sh start-benchmark.sh; do
-      sed -i '2a export APPIMAGE_EXTRACT_AND_RUN=1' "$INSTALL_DIR/$f"
-    done
+if [ "$IS_APPIMAGE" = 1 ]; then
+  # AppImage 不含 CUDA/cuDNN；ldd 对它无意义，改查 ldconfig 缓存 (仅提示，LD_LIBRARY_PATH 安装的库不会出现在缓存里)。
+  cublas_major="${VARIANT%%.*}"; cudnn_major=9; [ "$VARIANT" = 12.1 ] && cudnn_major=8
+  if [ -n "$LDCONFIG" ]; then
+    cache="$(ldcache)"
+    printf '%s\n' "$cache" | grep -q "libcublas\.so\.$cublas_major" || warn "未在 ldconfig 缓存中找到 libcublas.so.$cublas_major (需要 CUDA $VARIANT 运行库) / libcublas.so.$cublas_major not found in ldconfig cache"
+    printf '%s\n' "$cache" | grep -q "libcudnn\.so\.$cudnn_major" || warn "未在 ldconfig 缓存中找到 libcudnn.so.$cudnn_major (需要 cuDNN $cudnn_major.x) / libcudnn.so.$cudnn_major not found in ldconfig cache"
   fi
 else
   missing="$(ldd "$K" 2>/dev/null | grep 'not found' || true)"

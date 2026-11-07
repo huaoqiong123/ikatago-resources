@@ -33,7 +33,10 @@ check "bad --cuda value" 1 "must be one of" env PATH="$(mkbin 12.4)" HOME="$H" b
 check "ikatago-server primary url is upstream" 0 "ikatago-server/releases/download/v5.0.1.*fallback https://github.com/kinfkong" env PATH="$(mkbin 12.4)" HOME="$H" bash "$S" --dry-run
 
 # ---- end-to-end install against local file:// assets (no network, no GPU) ----
-if command -v zip >/dev/null 2>&1; then
+if ! command -v zip >/dev/null 2>&1; then
+  echo "FAIL e2e prerequisite: zip is required to run the install regression suite" >&2
+  exit 1
+fi
   E="$T/e2e"; mkdir -p "$E/assets" "$E/kz" "$E/sv/ikatago-server-5.0.1-linux"
   printf '\177ELF\002\001\001\000AI\002rest' > "$E/kz/katago"
   echo cfg > "$E/kz/default_gtp.cfg"; echo cfg > "$E/kz/analysis_example.cfg"
@@ -57,12 +60,19 @@ if command -v zip >/dev/null 2>&1; then
   [ -x "$H1/ikatago/start-gtp.sh" ] && [ -x "$H1/ikatago/start-ikatago-server.sh" ] && [ -L "$H1/ikatago/networks/default.bin.gz" ] \
     && [ -f "$H1/ikatago/configs/gtp.cfg" ] && [ -x "$H1/ikatago/ikatago-server/ikatago-server-5.0.1-linux/ikatago-server" ] \
     && { echo "PASS e2e layout"; pass=$((pass+1)); } || { echo "FAIL e2e layout"; fail=$((fail+1)); }
-  g=0; s_=0
-  grep -q APPIMAGE_EXTRACT_AND_RUN "$H1/ikatago/start-gtp.sh" && g=1
-  grep -q APPIMAGE_EXTRACT_AND_RUN "$H1/ikatago/start-ikatago-server.sh" && s_=1
-  [ "$g" = "$s_" ] && { echo "PASS e2e appimage env consistent across all start scripts"; pass=$((pass+1)); } || { echo "FAIL e2e appimage env differs (gtp=$g server=$s_)"; fail=$((fail+1)); }
-  for f in start-analysis.sh start-benchmark.sh; do
-    [ "$(grep -c APPIMAGE_EXTRACT_AND_RUN "$H1/ikatago/$f")" = "$g" ] && { echo "PASS e2e $f env"; pass=$((pass+1)); } || { echo "FAIL e2e $f env"; fail=$((fail+1)); }
+  for f in start-gtp.sh start-analysis.sh start-benchmark.sh start-ikatago-server.sh; do
+    count="$(grep -Ec '^[[:space:]]*export APPIMAGE_EXTRACT_AND_RUN=1[[:space:]]*  check "e2e cached on rerun" 0 "cached" inst "$H1" "$E/good.tsv"
+
+  mkmanifest "$E/fallback.tsv" "file://$E/missing" 0 0
+  check "e2e falls back to upstream url" 0 "done" inst "$T/h2" "$E/fallback.tsv"
+  check "e2e no-fallback fails (rc 5)" 5 "failed to download" inst "$T/h3" "$E/fallback.tsv" --no-upstream-fallback
+  mkmanifest "$E/badsha.tsv" "file://$E/assets" 1 0
+  check "e2e sha256 mismatch fails (rc 5)" 5 "sha256 mismatch" inst "$T/h4" "$E/badsha.tsv" --no-upstream-fallback
+  mkmanifest "$E/crlf.tsv" "file://$E/assets" 0 1
+  check "e2e CRLF manifest" 0 "done" inst "$T/h5" "$E/crlf.tsv"
+echo "passed=$pass failed=$fail"; [ "$fail" = 0 ]
+ "$H1/ikatago/$f" || true)"
+    [ "$count" = 1 ] && { echo "PASS e2e $f appimage env"; pass=$((pass+1)); } || { echo "FAIL e2e $f appimage env (count=$count)"; fail=$((fail+1)); }
   done
   check "e2e cached on rerun" 0 "cached" inst "$H1" "$E/good.tsv"
 

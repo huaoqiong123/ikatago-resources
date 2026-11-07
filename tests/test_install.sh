@@ -61,17 +61,7 @@ fi
     && [ -f "$H1/ikatago/configs/gtp.cfg" ] && [ -x "$H1/ikatago/ikatago-server/ikatago-server-5.0.1-linux/ikatago-server" ] \
     && { echo "PASS e2e layout"; pass=$((pass+1)); } || { echo "FAIL e2e layout"; fail=$((fail+1)); }
   for f in start-gtp.sh start-analysis.sh start-benchmark.sh start-ikatago-server.sh; do
-    count="$(grep -Ec '^[[:space:]]*export APPIMAGE_EXTRACT_AND_RUN=1[[:space:]]*  check "e2e cached on rerun" 0 "cached" inst "$H1" "$E/good.tsv"
-
-  mkmanifest "$E/fallback.tsv" "file://$E/missing" 0 0
-  check "e2e falls back to upstream url" 0 "done" inst "$T/h2" "$E/fallback.tsv"
-  check "e2e no-fallback fails (rc 5)" 5 "failed to download" inst "$T/h3" "$E/fallback.tsv" --no-upstream-fallback
-  mkmanifest "$E/badsha.tsv" "file://$E/assets" 1 0
-  check "e2e sha256 mismatch fails (rc 5)" 5 "sha256 mismatch" inst "$T/h4" "$E/badsha.tsv" --no-upstream-fallback
-  mkmanifest "$E/crlf.tsv" "file://$E/assets" 0 1
-  check "e2e CRLF manifest" 0 "done" inst "$T/h5" "$E/crlf.tsv"
-echo "passed=$pass failed=$fail"; [ "$fail" = 0 ]
- "$H1/ikatago/$f" || true)"
+    count="$(grep -Ec '^[[:space:]]*export APPIMAGE_EXTRACT_AND_RUN=1[[:space:]]*$' "$H1/ikatago/$f" || true)"
     [ "$count" = 1 ] && { echo "PASS e2e $f appimage env"; pass=$((pass+1)); } || { echo "FAIL e2e $f appimage env (count=$count)"; fail=$((fail+1)); }
   done
   check "e2e cached on rerun" 0 "cached" inst "$H1" "$E/good.tsv"
@@ -83,7 +73,4 @@ echo "passed=$pass failed=$fail"; [ "$fail" = 0 ]
   check "e2e sha256 mismatch fails (rc 5)" 5 "sha256 mismatch" inst "$T/h4" "$E/badsha.tsv" --no-upstream-fallback
   mkmanifest "$E/crlf.tsv" "file://$E/assets" 0 1
   check "e2e CRLF manifest" 0 "done" inst "$T/h5" "$E/crlf.tsv"
-else
-  echo "SKIP e2e tests (zip not installed)"
-fi
 echo "passed=$pass failed=$fail"; [ "$fail" = 0 ]

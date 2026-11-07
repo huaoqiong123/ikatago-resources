@@ -9,11 +9,19 @@ tmp="$(mktemp)"
 while IFS= read -r line; do
   case "$line" in '#'*|'') printf '%s\n' "$line" >> "$tmp"; continue ;; esac
   IFS=$'\t' read -r id f url _sha _size src lic <<<"$line"
-  if [ -f "$ASSET_DIR/$f" ]; then
-    sha="$(sha256sum "$ASSET_DIR/$f" | awk '{print $1}')"; size="$(stat -c %s "$ASSET_DIR/$f")"
-  else
-    echo "WARN: $ASSET_DIR/$f missing, keeping old values" >&2; sha="$_sha"; size="$_size"
-  fi
+  case "$url" in
+    https://github.com/huaoqiong123/ikatago-resources/releases/download/*)
+      if [ -f "$ASSET_DIR/$f" ]; then
+        sha="$(sha256sum "$ASSET_DIR/$f" | awk '{print $1}')"; size="$(stat -c %s "$ASSET_DIR/$f")"
+      else
+        echo "WARN: $ASSET_DIR/$f missing, keeping old values" >&2; sha="$_sha"; size="$_size"
+      fi
+      ;;
+    *)
+      echo "INFO: $id uses an external primary URL; keeping manifest sha256/size" >&2
+      sha="$_sha"; size="$_size"
+      ;;
+  esac
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$id" "$f" "$url" "$sha" "$size" "$src" "$lic" >> "$tmp"
 done < manifest.tsv
 mv "$tmp" manifest.tsv
